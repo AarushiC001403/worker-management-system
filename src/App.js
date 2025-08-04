@@ -1,25 +1,129 @@
-import logo from './logo.svg';
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './components/Login';
+import Dashboard from './components/Dashboard';
+import Worker from './components/Worker';
+import Trade from './components/Trade';
+import Department from './components/Department';
+import Training from './components/Training';
+import TradeRegister from './components/TradeRegister';
+import TrainingRegister from './components/TrainingRegister';
+import Alerts from './components/Alerts';
+import Reports from './components/Reports';
 import './App.css';
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  const handleLogin = (credentials) => {
+    // Simple authentication - in real app, this would validate against backend
+    if (credentials.userId === 'user' && credentials.password === 'user123') {
+      setIsAuthenticated(true);
+      return true;
+    }
+    return false;
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+  };
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Router>
+      <div className="App">
+        <Routes>
+          <Route 
+            path="/" 
+            element={
+              isAuthenticated ? 
+              <Navigate to="/dashboard" replace /> : 
+              <Login onLogin={handleLogin} />
+            } 
+          />
+          <Route 
+            path="/login" 
+            element={
+              isAuthenticated ? 
+              <Navigate to="/dashboard" replace /> : 
+              <Login onLogin={handleLogin} />
+            } 
+          />
+          <Route 
+            path="/dashboard" 
+            element={
+              isAuthenticated ? 
+              <Dashboard onLogout={handleLogout} /> : 
+              <Navigate to="/login" replace />
+            } 
+          />
+          <Route 
+            path="/worker" 
+            element={
+              isAuthenticated ? 
+              <Dashboard onLogout={handleLogout} activePage="worker" /> : 
+              <Navigate to="/login" replace />
+            } 
+          />
+          <Route 
+            path="/trade" 
+            element={
+              isAuthenticated ? 
+              <Dashboard onLogout={handleLogout} activePage="trade" /> : 
+              <Navigate to="/login" replace />
+            } 
+          />
+          <Route 
+            path="/department" 
+            element={
+              isAuthenticated ? 
+              <Dashboard onLogout={handleLogout} activePage="department" /> : 
+              <Navigate to="/login" replace />
+            } 
+          />
+          <Route 
+            path="/training" 
+            element={
+              isAuthenticated ? 
+              <Dashboard onLogout={handleLogout} activePage="training" /> : 
+              <Navigate to="/login" replace />
+            } 
+          />
+          <Route 
+            path="/trade-register" 
+            element={
+              isAuthenticated ? 
+              <Dashboard onLogout={handleLogout} activePage="trade-register" /> : 
+              <Navigate to="/login" replace />
+            } 
+          />
+          <Route 
+            path="/training-register" 
+            element={
+              isAuthenticated ? 
+              <Dashboard onLogout={handleLogout} activePage="training-register" /> : 
+              <Navigate to="/login" replace />
+            } 
+          />
+          <Route 
+            path="/alerts" 
+            element={
+              isAuthenticated ? 
+              <Dashboard onLogout={handleLogout} activePage="alerts" /> : 
+              <Navigate to="/login" replace />
+            } 
+          />
+          <Route 
+            path="/reports" 
+            element={
+              isAuthenticated ? 
+              <Dashboard onLogout={handleLogout} activePage="reports" /> : 
+              <Navigate to="/login" replace />
+            } 
+          />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 
-export default App;
+export default App; 

@@ -1,5 +1,6 @@
 {
   "name": "worker-management-system",
+  "homepage": "https://aarushic001403.github.io/worker-management-system",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -7,14 +8,20 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
+    "highcharts": "^12.3.0",
+    "highcharts-more": "^0.1.7",
+    "highcharts-react-official": "^3.2.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.2",
     "react-scripts": "5.0.1",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -35,5 +42,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "gh-pages": "^6.3.0"
   }
 }
