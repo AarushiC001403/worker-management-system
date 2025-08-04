@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/worker-management-system/static/css/main.8b471132.css",
+    "main.js": "/worker-management-system/static/js/main.ec89919a.js",
+    "index.html": "/worker-management-system/index.html",
+    "main.8b471132.css.map": "/worker-management-system/static/css/main.8b471132.css.map",
+    "main.ec89919a.js.map": "/worker-management-system/static/js/main.ec89919a.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.8b471132.css",
+    "static/js/main.ec89919a.js"
+  ]
+}
