@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
+const API_BASE = 'http://localhost:5001';
+
 const TrainingRegister = () => {
   const [trainingRegisters, setTrainingRegisters] = useState([]);
   const [workers, setWorkers] = useState([]);
@@ -43,7 +45,7 @@ const TrainingRegister = () => {
   // API functions
   const fetchTrainingRegisters = async () => {
     try {
-      const response = await fetch('http://localhost:5001/api/training-registers');
+      const response = await fetch(`${API_BASE}/api/training-registers`);
       if (!response.ok) {
         throw new Error('Failed to fetch training registrations');
       }
@@ -56,7 +58,7 @@ const TrainingRegister = () => {
 
   const fetchWorkers = async () => {
     try {
-      const response = await fetch('http://localhost:5001/api/workers');
+      const response = await fetch(`${API_BASE}/api/workers`);
       if (!response.ok) {
         throw new Error('Failed to fetch workers');
       }
@@ -69,7 +71,7 @@ const TrainingRegister = () => {
 
   const fetchDepartments = async () => {
     try {
-      const response = await fetch('http://localhost:5001/api/departments');
+      const response = await fetch(`${API_BASE}/api/departments`);
       if (!response.ok) {
         throw new Error('Failed to fetch departments');
       }
@@ -82,7 +84,7 @@ const TrainingRegister = () => {
 
   const fetchTrainings = async () => {
     try {
-      const response = await fetch('http://localhost:5001/api/trainings');
+      const response = await fetch(`${API_BASE}/api/trainings`);
       if (!response.ok) {
         throw new Error('Failed to fetch trainings');
       }
@@ -95,7 +97,7 @@ const TrainingRegister = () => {
 
   const addTrainingRegistration = async (registrationData) => {
     try {
-      const response = await fetch('http://localhost:5001/api/training-registers', {
+      const response = await fetch(`${API_BASE}/api/training-registers`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -115,7 +117,7 @@ const TrainingRegister = () => {
 
   const updateTrainingRegistration = async (id, registrationData) => {
     try {
-      const response = await fetch(`http://localhost:5001/api/training-registers/${id}`, {
+      const response = await fetch(`${API_BASE}/api/training-registers/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -135,7 +137,7 @@ const TrainingRegister = () => {
 
   const deleteTrainingRegistration = async (id, recordDate) => {
     try {
-      const response = await fetch(`http://localhost:5001/api/training-registers/${id}`, {
+      const response = await fetch(`${API_BASE}/api/training-registers/${id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

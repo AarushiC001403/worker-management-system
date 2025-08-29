@@ -2,14 +2,6 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
-import Worker from './components/Worker';
-import Trade from './components/Trade';
-import Department from './components/Department';
-import Training from './components/Training';
-import TradeRegister from './components/TradeRegister';
-import TrainingRegister from './components/TrainingRegister';
-import Alerts from './components/Alerts';
-import Reports from './components/Reports';
 import './App.css';
 
 function App() {
@@ -29,7 +21,7 @@ function App() {
   };
 
   return (
-    <Router>
+    <Router basename="/worker-management-system">
       <div className="App">
         <Routes>
           <Route 

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
+const API_BASE = 'https://backend-k6ko.onrender.com';
+
 const Training = () => {
   const [trainings, setTrainings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -44,7 +46,7 @@ const Training = () => {
   const fetchTrainings = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5001/api/trainings');
+      const response = await fetch(`${API_BASE}/api/trainings`);
       if (!response.ok) {
         throw new Error('Failed to fetch trainings');
       }
@@ -59,7 +61,7 @@ const Training = () => {
 
   const addTraining = async (trainingData) => {
     try {
-      const response = await fetch('http://localhost:5001/api/trainings', {
+      const response = await fetch(`${API_BASE}/api/trainings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -79,7 +81,7 @@ const Training = () => {
 
   const updateTraining = async (id, trainingData) => {
     try {
-      const response = await fetch(`http://localhost:5001/api/trainings/${id}`, {
+      const response = await fetch(`${API_BASE}/api/trainings/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -99,7 +101,7 @@ const Training = () => {
 
   const deleteTraining = async (id) => {
     try {
-      const response = await fetch(`http://localhost:5001/api/trainings/${id}`, {
+      const response = await fetch(`${API_BASE}/api/trainings/${id}`, {
         method: 'DELETE',
       });
       if (!response.ok) {

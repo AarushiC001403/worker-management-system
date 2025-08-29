@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
+const API_BASE = 'https://backend-k6ko.onrender.com';
+
 const Worker = () => {
   const [workers, setWorkers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -63,7 +65,7 @@ const Worker = () => {
   const fetchWorkers = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5001/api/workers');
+      const response = await fetch(`${API_BASE}/api/workers`);
       if (!response.ok) {
         throw new Error('Failed to fetch workers');
       }
@@ -78,7 +80,7 @@ const Worker = () => {
 
   const addWorker = async (workerData) => {
     try {
-      const response = await fetch('http://localhost:5001/api/workers', {
+      const response = await fetch(`${API_BASE}/api/workers`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -98,7 +100,7 @@ const Worker = () => {
 
   const updateWorker = async (id, workerData) => {
     try {
-      const response = await fetch(`http://localhost:5001/api/workers/${id}`, {
+      const response = await fetch(`${API_BASE}/api/workers/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -118,7 +120,7 @@ const Worker = () => {
 
   const deleteWorker = async (id) => {
     try {
-      const response = await fetch(`http://localhost:5001/api/workers/${id}`, {
+      const response = await fetch(`${API_BASE}/api/workers/${id}`, {
         method: 'DELETE',
       });
       if (!response.ok) {

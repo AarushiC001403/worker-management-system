@@ -11,6 +11,8 @@ import TrainingRegister from './TrainingRegister';
 import Alerts from './Alerts';
 import Reports from './Reports';
 
+const API_BASE = 'https://backend-k6ko.onrender.com';
+
 const Dashboard = ({ onLogout, activePage }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -24,16 +26,16 @@ const Dashboard = ({ onLogout, activePage }) => {
   const [trainingCount, setTrainingCount] = useState(null);
 
   useEffect(() => {
-    fetch('http://localhost:5001/api/workers')
+    fetch(`${API_BASE}/api/workers`)
       .then(res => res.json())
       .then(data => setWorkerCount(data.length));
-    fetch('http://localhost:5001/api/trades')
+    fetch(`${API_BASE}/api/trades`)
       .then(res => res.json())
       .then(data => setTradeCount(data.length));
-    fetch('http://localhost:5001/api/departments')
+    fetch(`${API_BASE}/api/departments`)
       .then(res => res.json())
       .then(data => setDepartmentCount(data.length));
-    fetch('http://localhost:5001/api/trainings')
+    fetch(`${API_BASE}/api/trainings`)
       .then(res => res.json())
       .then(data => setTrainingCount(data.length));
   }, []);

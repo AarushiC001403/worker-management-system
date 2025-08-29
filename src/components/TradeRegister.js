@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
+const API_BASE = 'https://backend-k6ko.onrender.com';
+
 const TradeRegister = () => {
   const [tradeRegisters, setTradeRegisters] = useState([]);
   const [workers, setWorkers] = useState([]);
@@ -44,7 +46,7 @@ const TradeRegister = () => {
   // API functions
   const fetchTradeRegisters = async () => {
     try {
-      const response = await fetch('http://localhost:5001/api/trade-registers');
+      const response = await fetch(`${API_BASE}/api/trade-registers`);
       if (!response.ok) {
         throw new Error('Failed to fetch trade registrations');
       }
@@ -57,7 +59,7 @@ const TradeRegister = () => {
 
   const fetchWorkers = async () => {
     try {
-      const response = await fetch('http://localhost:5001/api/workers');
+      const response = await fetch(`${API_BASE}/api/workers`);
       if (!response.ok) {
         throw new Error('Failed to fetch workers');
       }
@@ -70,7 +72,7 @@ const TradeRegister = () => {
 
   const fetchDepartments = async () => {
     try {
-      const response = await fetch('http://localhost:5001/api/departments');
+      const response = await fetch(`${API_BASE}/api/departments`);
       if (!response.ok) {
         throw new Error('Failed to fetch departments');
       }
@@ -83,7 +85,7 @@ const TradeRegister = () => {
 
   const fetchTrades = async () => {
     try {
-      const response = await fetch('http://localhost:5001/api/trades');
+      const response = await fetch(`${API_BASE}/api/trades`);
       if (!response.ok) {
         throw new Error('Failed to fetch trades');
       }
@@ -96,7 +98,7 @@ const TradeRegister = () => {
 
   const addTradeRegistration = async (registrationData) => {
     try {
-      const response = await fetch('http://localhost:5001/api/trade-registers', {
+      const response = await fetch(`${API_BASE}/api/trade-registers`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -116,7 +118,7 @@ const TradeRegister = () => {
 
   const updateTradeRegistration = async (id, registrationData) => {
     try {
-      const response = await fetch(`http://localhost:5001/api/trade-registers/${id}`, {
+      const response = await fetch(`${API_BASE}/api/trade-registers/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -136,7 +138,7 @@ const TradeRegister = () => {
 
   const deleteTradeRegistration = async (id, recordDate) => {
     try {
-      const response = await fetch(`http://localhost:5001/api/trade-registers/${id}`, {
+      const response = await fetch(`${API_BASE}/api/trade-registers/${id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

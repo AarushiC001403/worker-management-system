@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
+const API_BASE = 'https://backend-k6ko.onrender.com';
+
 const Department = () => {
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,7 +37,7 @@ const Department = () => {
   const fetchDepartments = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5001/api/departments');
+      const response = await fetch(`${API_BASE}/api/departments`);
       if (!response.ok) {
         throw new Error('Failed to fetch departments');
       }
@@ -50,7 +52,7 @@ const Department = () => {
 
   const addDepartment = async (departmentData) => {
     try {
-      const response = await fetch('http://localhost:5001/api/departments', {
+      const response = await fetch(`${API_BASE}/api/departments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -70,7 +72,7 @@ const Department = () => {
 
   const updateDepartment = async (id, departmentData) => {
     try {
-      const response = await fetch(`http://localhost:5001/api/departments/${id}`, {
+      const response = await fetch(`${API_BASE}/api/departments/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -90,7 +92,7 @@ const Department = () => {
 
   const deleteDepartment = async (id) => {
     try {
-      const response = await fetch(`http://localhost:5001/api/departments/${id}`, {
+      const response = await fetch(`${API_BASE}/api/departments/${id}`, {
         method: 'DELETE',
       });
       if (!response.ok) {

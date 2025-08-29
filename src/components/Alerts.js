@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Highcharts from 'highcharts';
 import HighchartsReact from 'highcharts-react-official';
-import 'highcharts/highcharts-more';
+
+const API_BASE = 'https://backend-k6ko.onrender.com';
 
 const ALERT_TYPES = [
   { key: 'trade', label: 'Trade Register Alerts' },
@@ -50,12 +51,12 @@ const Alerts = () => {
         let url = '';
         if (selectedType === 'trade') {
           url = selectedStatus === 'active'
-            ? 'http://localhost:5001/api/trade-registers/alerts'
-            : 'http://localhost:5001/api/trade-registers';
+            ? `${API_BASE}/api/trade-registers/alerts`
+            : `${API_BASE}/api/trade-registers`;
         } else {
           url = selectedStatus === 'active'
-            ? 'http://localhost:5001/api/training-registers/alerts'
-            : 'http://localhost:5001/api/training-registers';
+            ? `${API_BASE}/api/training-registers/alerts`
+            : `${API_BASE}/api/training-registers`;
         }
         const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to fetch alerts');
@@ -87,10 +88,10 @@ const Alerts = () => {
     const processChartData = async () => {
       try {
         // Fetch actual alerts (overdue and expiring soon)
-        const tradeAlertsResponse = await fetch('http://localhost:5001/api/trade-registers/alerts');
+        const tradeAlertsResponse = await fetch(`${API_BASE}/api/trade-registers/alerts`);
         const tradeAlertsData = await tradeAlertsResponse.json();
         
-        const trainingAlertsResponse = await fetch('http://localhost:5001/api/training-registers/alerts');
+        const trainingAlertsResponse = await fetch(`${API_BASE}/api/training-registers/alerts`);
         const trainingAlertsData = await trainingAlertsResponse.json();
 
         console.log('Trade alerts:', tradeAlertsData);
@@ -209,8 +210,8 @@ const Alerts = () => {
     try {
       const endpoint = isCompleted ? 'complete-alert' : 'incomplete-alert';
       const url = selectedType === 'trade' 
-        ? `http://localhost:5001/api/trade-registers/${alert.Worker_ID}/${endpoint}`
-        : `http://localhost:5001/api/training-registers/${alert.Worker_ID}/${endpoint}`;
+        ? `${API_BASE}/api/trade-registers/${alert.Worker_ID}/${endpoint}`
+        : `${API_BASE}/api/training-registers/${alert.Worker_ID}/${endpoint}`;
       
       const response = await fetch(url, {
         method: 'PUT',

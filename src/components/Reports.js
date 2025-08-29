@@ -1,32 +1,37 @@
 import React, { useState, useEffect } from 'react';
+import * as XLSX from 'xlsx';
+
+const API_BASE = 'https://backend-k6ko.onrender.com1';
 
 const REPORT_TYPES = [
-  { key: 'worker-history', label: 'Worker-wise Training History' },
-  { key: 'department-workers', label: 'Department-wise Workers List' },
-  { key: 'active-workers', label: 'Active Workers List' }
+  { key: 'department-wise', label: 'Department-wise Reports' },
+  { key: 'trade-wise', label: 'Trade-wise Reports' },
+  { key: 'alert-wise', label: 'Alert-wise Reports' }
 ];
 
 const Reports = () => {
-  const [selectedReport, setSelectedReport] = useState('worker-history');
+  const [selectedReport, setSelectedReport] = useState('department-wise');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [reportData, setReportData] = useState([]);
   const [workers, setWorkers] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [trades, setTrades] = useState([]);
   const [tradeRegisters, setTradeRegisters] = useState([]);
   const [trainingRegisters, setTrainingRegisters] = useState([]);
 
   // Filter states
   const [filters, setFilters] = useState({
-    workerId: '',
     departmentCode: '',
+    tradeCode: '',
     status: '',
+    validityAlert: '',
     dateRange: ''
   });
 
   // Sorting state
   const [sortConfig, setSortConfig] = useState({
-    key: 'Worker_ID',
+    key: 'Department_Code',
     direction: 'asc'
   });
 
@@ -39,24 +44,27 @@ const Reports = () => {
     const fetchAllData = async () => {
       setLoading(true);
       try {
-        const [workersRes, deptsRes, tradesRes, trainingsRes] = await Promise.all([
-          fetch('http://localhost:5001/api/workers'),
-          fetch('http://localhost:5001/api/departments'),
-          fetch('http://localhost:5001/api/trade-registers'),
-          fetch('http://localhost:5001/api/training-registers')
+        const [workersRes, deptsRes, tradesRes, tradeRegsRes, trainingRegsRes] = await Promise.all([
+          fetch(`${API_BASE}/api/workers`),
+          fetch(`${API_BASE}/api/departments`),
+          fetch(`${API_BASE}/api/trades`),
+          fetch(`${API_BASE}/api/trade-registers`),
+          fetch(`${API_BASE}/api/training-registers`)
         ]);
 
-        const [workersData, deptsData, tradesData, trainingsData] = await Promise.all([
+        const [workersData, deptsData, tradesData, tradeRegsData, trainingRegsData] = await Promise.all([
           workersRes.json(),
           deptsRes.json(),
           tradesRes.json(),
-          trainingsRes.json()
+          tradeRegsRes.json(),
+          trainingRegsRes.json()
         ]);
 
         setWorkers(workersData);
         setDepartments(deptsData);
-        setTradeRegisters(tradesData);
-        setTrainingRegisters(trainingsData);
+        setTrades(tradesData);
+        setTradeRegisters(tradeRegsData);
+        setTrainingRegisters(trainingRegsData);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -69,19 +77,19 @@ const Reports = () => {
 
   // Generate report data based on selected report
   useEffect(() => {
-    if (!workers.length) return;
+    if (!workers.length || !departments.length || !trades.length) return;
 
     let data = [];
     
     switch (selectedReport) {
-      case 'worker-history':
-        data = generateWorkerHistory();
+      case 'department-wise':
+        data = generateDepartmentWiseReport();
         break;
-      case 'department-workers':
-        data = generateDepartmentWorkers();
+      case 'trade-wise':
+        data = generateTradeWiseReport();
         break;
-      case 'active-workers':
-        data = generateActiveWorkers();
+      case 'alert-wise':
+        data = generateAlertWiseReport();
         break;
       default:
         data = [];
@@ -89,68 +97,236 @@ const Reports = () => {
 
     setReportData(data);
     setCurrentPage(1); // Reset to first page when report changes
-  }, [selectedReport, workers, departments, tradeRegisters, trainingRegisters]);
+  }, [selectedReport, workers, departments, trades, tradeRegisters, trainingRegisters]);
 
-  const generateWorkerHistory = () => {
-    if (!filters.workerId) return [];
+  const generateDepartmentWiseReport = () => {
+    const report = [];
     
-    const workerId = parseInt(filters.workerId);
-    const worker = workers.find(w => w.Worker_ID === workerId);
-    if (!worker) return [];
-
-    const workerTrades = tradeRegisters.filter(tr => tr.Worker_ID === workerId);
-    const workerTrainings = trainingRegisters.filter(tr => tr.Worker_ID === workerId);
-
-    const history = [];
-
-    // Add trade registrations
-    workerTrades.forEach(trade => {
-      const dept = departments.find(d => d.Department_code === trade.Department_Code);
-      history.push({
-        ...trade,
-        Type: 'Trade',
-        Department_Name: dept?.Department_Name || 'Unknown',
-        Record_Type: 'Trade Registration'
+    departments.forEach(dept => {
+      const deptTradeRegs = tradeRegisters.filter(tr => tr.Department_Code === dept.Department_code);
+      const deptTrainingRegs = trainingRegisters.filter(tr => tr.Department_Code === dept.Department_code);
+      
+      // Group by trade
+      const tradeGroups = {};
+      deptTradeRegs.forEach(reg => {
+        const trade = trades.find(t => t.Trade_Code === reg.Trade_Code);
+        if (!tradeGroups[reg.Trade_Code]) {
+          tradeGroups[reg.Trade_Code] = {
+            Trade_Code: reg.Trade_Code,
+            Trade_Name: trade?.Trade_Name || 'Unknown',
+            Active_Count: 0,
+            Inactive_Count: 0,
+            Completed_Count: 0,
+            Suspended_Count: 0,
+            Expiring_Count: 0,
+            Valid_Count: 0
+          };
+        }
+        
+        switch (reg.Status) {
+          case 'Active':
+            tradeGroups[reg.Trade_Code].Active_Count++;
+            break;
+          case 'Inactive':
+            tradeGroups[reg.Trade_Code].Inactive_Count++;
+            break;
+          case 'Completed':
+            tradeGroups[reg.Trade_Code].Completed_Count++;
+            break;
+          case 'Suspended':
+            tradeGroups[reg.Trade_Code].Suspended_Count++;
+            break;
+        }
+        
+        // Check validity
+        if (reg.Validity_Date) {
+          const today = new Date();
+          const validity = new Date(reg.Validity_Date);
+          const diffTime = validity - today;
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          
+          if (diffDays <= 7) {
+            tradeGroups[reg.Trade_Code].Expiring_Count++;
+          } else {
+            tradeGroups[reg.Trade_Code].Valid_Count++;
+          }
+        }
+      });
+      
+      Object.values(tradeGroups).forEach(tradeGroup => {
+        report.push({
+          Department_Code: dept.Department_code,
+          Department_Name: dept.Department_Name,
+          ...tradeGroup
+        });
       });
     });
+    
+    return report;
+  };
 
-    // Add training registrations
-    workerTrainings.forEach(training => {
-      const dept = departments.find(d => d.Department_code === training.Department_Code);
-      history.push({
-        ...training,
-        Type: 'Training',
-        Department_Name: dept?.Department_Name || 'Unknown',
-        Record_Type: 'Training Registration'
+  const generateTradeWiseReport = () => {
+    const report = [];
+    
+    trades.forEach(trade => {
+      const tradeRegs = tradeRegisters.filter(tr => tr.Trade_Code === trade.Trade_Code);
+      
+      // Group by department
+      const deptGroups = {};
+      tradeRegs.forEach(reg => {
+        const dept = departments.find(d => d.Department_code === reg.Department_Code);
+        if (!deptGroups[reg.Department_Code]) {
+          deptGroups[reg.Department_Code] = {
+            Department_Code: reg.Department_Code,
+            Department_Name: dept?.Department_Name || 'Unknown',
+            Active_Count: 0,
+            Inactive_Count: 0,
+            Completed_Count: 0,
+            Suspended_Count: 0,
+            Expiring_Count: 0,
+            Valid_Count: 0
+          };
+        }
+        
+        switch (reg.Status) {
+          case 'Active':
+            deptGroups[reg.Department_Code].Active_Count++;
+            break;
+          case 'Inactive':
+            deptGroups[reg.Department_Code].Inactive_Count++;
+            break;
+          case 'Completed':
+            deptGroups[reg.Department_Code].Completed_Count++;
+            break;
+          case 'Suspended':
+            deptGroups[reg.Department_Code].Suspended_Count++;
+            break;
+        }
+        
+        // Check validity
+        if (reg.Validity_Date) {
+          const today = new Date();
+          const validity = new Date(reg.Validity_Date);
+          const diffTime = validity - today;
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          
+          if (diffDays <= 7) {
+            deptGroups[reg.Department_Code].Expiring_Count++;
+          } else {
+            deptGroups[reg.Department_Code].Valid_Count++;
+          }
+        }
+      });
+      
+      Object.values(deptGroups).forEach(deptGroup => {
+        report.push({
+          Trade_Code: trade.Trade_Code,
+          Trade_Name: trade.Trade_Name,
+          ...deptGroup
+        });
       });
     });
-
-    return history.sort((a, b) => new Date(b.Record_Date) - new Date(a.Record_Date));
+    
+    return report;
   };
 
-  const generateDepartmentWorkers = () => {
-    return workers.map(worker => {
-      const dept = departments.find(d => d.Department_code === worker.Department_Code);
-      return {
-        ...worker,
-        Department_Name: dept?.Department_Name || 'Unknown'
-      };
+  const generateAlertWiseReport = () => {
+    const report = [];
+    const today = new Date();
+    
+    // Process trade registrations
+    tradeRegisters.forEach(reg => {
+      if (reg.Status === 'Active' && reg.Validity_Date) {
+        const validity = new Date(reg.Validity_Date);
+        const diffTime = validity - today;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays < 0 || diffDays <= 7) {
+          const dept = departments.find(d => d.Department_code === reg.Department_Code);
+          const trade = trades.find(t => t.Trade_Code === reg.Trade_Code);
+          
+          report.push({
+            Alert_Type: diffDays < 0 ? 'OVERDUE' : 'EXPIRING',
+            Alert_Description: diffDays < 0 
+              ? `Trade registration overdue by ${Math.abs(diffDays)} days`
+              : `Trade registration expiring in ${diffDays} days`,
+            Registration_Type: 'Trade',
+            Worker_ID: reg.Worker_ID,
+            Department_Code: reg.Department_Code,
+            Department_Name: dept?.Department_Name || 'Unknown',
+            Trade_Code: reg.Trade_Code,
+            Trade_Name: trade?.Trade_Name || 'Unknown',
+            Enrollment_Date: reg.Enrollment_Date,
+            Validity_Date: reg.Validity_Date,
+            Days_Remaining: diffDays,
+            Status: reg.Status,
+            Remarks: reg.Remarks || '',
+            Record_Date: reg.Record_Date
+          });
+        }
+      }
     });
-  };
-
-  const generateActiveWorkers = () => {
-    return workers.filter(worker => worker.Status === 'Active');
+    
+    // Process training registrations
+    trainingRegisters.forEach(reg => {
+      if (reg.Status === 'Active' && reg.Validity_Date) {
+        const validity = new Date(reg.Validity_Date);
+        const diffTime = validity - today;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays < 0 || diffDays <= 7) {
+          const dept = departments.find(d => d.Department_code === reg.Department_Code);
+          
+          report.push({
+            Alert_Type: diffDays < 0 ? 'OVERDUE' : 'EXPIRING',
+            Alert_Description: diffDays < 0 
+              ? `Training registration overdue by ${Math.abs(diffDays)} days`
+              : `Training registration expiring in ${diffDays} days`,
+            Registration_Type: 'Training',
+            Worker_ID: reg.Worker_ID,
+            Department_Code: reg.Department_Code,
+            Department_Name: dept?.Department_Name || 'Unknown',
+            Trade_Code: reg.Trade_Code,
+            Trade_Name: 'Training Program',
+            Enrollment_Date: reg.Enrollment_Date,
+            Validity_Date: reg.Validity_Date,
+            Days_Remaining: diffDays,
+            Status: reg.Status,
+            Remarks: reg.Remarks || '',
+            Record_Date: reg.Record_Date
+          });
+        }
+      }
+    });
+    
+    return report.sort((a, b) => {
+      // Sort by alert type (overdue first), then by days remaining
+      if (a.Alert_Type !== b.Alert_Type) {
+        return a.Alert_Type === 'OVERDUE' ? -1 : 1;
+      }
+      return a.Days_Remaining - b.Days_Remaining;
+    });
   };
 
   // Apply filters
   const filteredData = reportData.filter(item => {
-    if (selectedReport === 'worker-history') {
-      return true; // Already filtered by worker ID
-    }
-    
-    const workerMatch = !filters.workerId || item.Worker_ID?.toString() === filters.workerId;
-    const deptMatch = !filters.departmentCode || item.Department_Code?.toString() === filters.departmentCode;
+    const deptMatch = !filters.departmentCode || item.Department_Code === filters.departmentCode;
+    const tradeMatch = !filters.tradeCode || item.Trade_Code === filters.tradeCode;
     const statusMatch = !filters.status || item.Status === filters.status;
+    
+    let validityAlertMatch = true;
+    if (filters.validityAlert && selectedReport === 'alert-wise') {
+      switch (filters.validityAlert) {
+        case 'overdue':
+          validityAlertMatch = item.Alert_Type === 'OVERDUE';
+          break;
+        case 'expiring':
+          validityAlertMatch = item.Alert_Type === 'EXPIRING';
+          break;
+        default:
+          validityAlertMatch = true;
+      }
+    }
     
     let dateMatch = true;
     if (filters.dateRange && item.Record_Date) {
@@ -161,7 +337,7 @@ const Reports = () => {
       dateMatch = recordDate >= startDate && recordDate <= endDate;
     }
 
-    return workerMatch && deptMatch && statusMatch && dateMatch;
+    return deptMatch && tradeMatch && statusMatch && validityAlertMatch && dateMatch;
   });
 
   // Apply sorting
@@ -170,7 +346,7 @@ const Reports = () => {
     let aValue = a[key];
     let bValue = b[key];
 
-    if (key === 'Record_Date' || key === 'Validity_Date') {
+    if (key === 'Record_Date' || key === 'Enrollment_Date' || key === 'Validity_Date') {
       aValue = new Date(aValue);
       bValue = new Date(bValue);
       return direction === 'asc' ? aValue - bValue : bValue - aValue;
@@ -198,9 +374,10 @@ const Reports = () => {
 
   const clearFilters = () => {
     setFilters({
-      workerId: '',
       departmentCode: '',
+      tradeCode: '',
       status: '',
+      validityAlert: '',
       dateRange: ''
     });
   };
@@ -214,6 +391,22 @@ const Reports = () => {
 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
+  };
+
+  // Excel export functionality
+  const exportToExcel = () => {
+    const worksheet = XLSX.utils.json_to_sheet(sortedData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, getReportTitle());
+    
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = window.URL.createObjectURL(data);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${getReportTitle()}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    link.click();
+    window.URL.revokeObjectURL(url);
   };
 
   const getStatusStyle = (status) => {
@@ -232,6 +425,16 @@ const Reports = () => {
         return {
           backgroundColor: '#f8d7da',
           color: '#721c24',
+          padding: '4px 8px',
+          borderRadius: '4px',
+          fontSize: '0.8rem',
+          fontWeight: '600',
+          textAlign: 'center'
+        };
+      case 'completed':
+        return {
+          backgroundColor: '#d1ecf1',
+          color: '#0c5460',
           padding: '4px 8px',
           borderRadius: '4px',
           fontSize: '0.8rem',
@@ -261,37 +464,86 @@ const Reports = () => {
     }
   };
 
+  const getAlertStyle = (alertType) => {
+    switch (alertType) {
+      case 'OVERDUE':
+        return {
+          backgroundColor: '#f8d7da',
+          color: '#721c24',
+          padding: '4px 8px',
+          borderRadius: '4px',
+          fontSize: '0.8rem',
+          fontWeight: '600',
+          textAlign: 'center',
+          border: '2px solid #dc3545'
+        };
+      case 'EXPIRING':
+        return {
+          backgroundColor: '#fff3cd',
+          color: '#856404',
+          padding: '4px 8px',
+          borderRadius: '4px',
+          fontSize: '0.8rem',
+          fontWeight: '600',
+          textAlign: 'center',
+          border: '2px solid #ffc107'
+        };
+      default:
+        return {
+          backgroundColor: '#e2e3e5',
+          color: '#383d41',
+          padding: '4px 8px',
+          borderRadius: '4px',
+          fontSize: '0.8rem',
+          fontWeight: '600',
+          textAlign: 'center'
+        };
+    }
+  };
+
   const getReportColumns = () => {
     switch (selectedReport) {
-      case 'worker-history':
+      case 'department-wise':
         return [
-          { key: 'Record_Type', label: 'Record Type' },
-          { key: 'Type', label: 'Type' },
-          { key: 'Department_Name', label: 'Department' },
-          { key: 'Record_Date', label: 'Record Date' },
+          { key: 'Department_Code', label: 'Department Code' },
+          { key: 'Department_Name', label: 'Department Name' },
+          { key: 'Trade_Code', label: 'Trade Code' },
+          { key: 'Trade_Name', label: 'Trade Name' },
+          { key: 'Active_Count', label: 'Active' },
+          { key: 'Inactive_Count', label: 'Inactive' },
+          { key: 'Completed_Count', label: 'Completed' },
+          { key: 'Suspended_Count', label: 'Suspended' },
+          { key: 'Expiring_Count', label: 'Expiring Soon' },
+          { key: 'Valid_Count', label: 'Valid' }
+        ];
+      case 'trade-wise':
+        return [
+          { key: 'Trade_Code', label: 'Trade Code' },
+          { key: 'Trade_Name', label: 'Trade Name' },
+          { key: 'Department_Code', label: 'Department Code' },
+          { key: 'Department_Name', label: 'Department Name' },
+          { key: 'Active_Count', label: 'Active' },
+          { key: 'Inactive_Count', label: 'Inactive' },
+          { key: 'Completed_Count', label: 'Completed' },
+          { key: 'Suspended_Count', label: 'Suspended' },
+          { key: 'Expiring_Count', label: 'Expiring Soon' },
+          { key: 'Valid_Count', label: 'Valid' }
+        ];
+      case 'alert-wise':
+        return [
+          { key: 'Alert_Type', label: 'Alert Type' },
+          { key: 'Alert_Description', label: 'Alert Description' },
+          { key: 'Registration_Type', label: 'Registration Type' },
+          { key: 'Worker_ID', label: 'Worker ID' },
+          { key: 'Department_Code', label: 'Department Code' },
+          { key: 'Department_Name', label: 'Department Name' },
+          { key: 'Trade_Code', label: 'Trade Code' },
+          { key: 'Trade_Name', label: 'Trade Name' },
+          { key: 'Enrollment_Date', label: 'Enrollment Date' },
           { key: 'Validity_Date', label: 'Validity Date' },
+          { key: 'Days_Remaining', label: 'Days Remaining' },
           { key: 'Status', label: 'Status' },
           { key: 'Remarks', label: 'Remarks' }
-        ];
-      case 'department-workers':
-        return [
-          { key: 'Worker_ID', label: 'Worker ID' },
-          { key: 'Department_Name', label: 'Department' },
-          { key: 'Age', label: 'Age' },
-          { key: 'Gender', label: 'Gender' },
-          { key: 'State', label: 'State' },
-          { key: 'Qualification', label: 'Qualification' },
-          { key: 'Status', label: 'Status' }
-        ];
-      case 'active-workers':
-        return [
-          { key: 'Worker_ID', label: 'Worker ID' },
-          { key: 'Age', label: 'Age' },
-          { key: 'Gender', label: 'Gender' },
-          { key: 'State', label: 'State' },
-          { key: 'Qualification', label: 'Qualification' },
-          { key: 'Skill', label: 'Skill' },
-          { key: 'Blood_Group', label: 'Blood Group' }
         ];
       default:
         return [];
@@ -300,14 +552,12 @@ const Reports = () => {
 
   const getReportTitle = () => {
     switch (selectedReport) {
-      case 'worker-history':
-        return filters.workerId 
-          ? `Training & Trade History for Worker ID: ${filters.workerId}`
-          : 'Worker-wise Training History (Select Worker ID)';
-      case 'department-workers':
-        return 'Department-wise Workers List';
-      case 'active-workers':
-        return 'Active Workers List';
+      case 'department-wise':
+        return 'Department-wise Reports';
+      case 'trade-wise':
+        return 'Trade-wise Reports';
+      case 'alert-wise':
+        return 'Alert-wise Reports';
       default:
         return 'Reports';
     }
@@ -325,6 +575,14 @@ const Reports = () => {
     <div className="content-area">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h2 style={{ color: '#8B4513' }}>Reports & Analytics</h2>
+        <button 
+          className="btn btn-success" 
+          onClick={exportToExcel}
+          disabled={sortedData.length === 0}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+        >
+          📊 Export to Excel
+        </button>
       </div>
 
       {/* Report Type Selection */}
@@ -351,91 +609,71 @@ const Reports = () => {
       }}>
         <h4 style={{ marginBottom: '1rem', color: '#495057' }}>Filters</h4>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-          {selectedReport === 'worker-history' && (
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Worker ID *</label>
-              <select
-                name="workerId"
-                value={filters.workerId}
-                onChange={handleFilterChange}
-                style={{ width: '100%', padding: '0.5rem', border: '1px solid #ced4da', borderRadius: '4px' }}
-              >
-                <option value="">Select Worker ID</option>
-                {workers.map(worker => (
-                  <option key={worker.Worker_ID} value={worker.Worker_ID}>
-                    {worker.Worker_ID} - {worker.State}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Department</label>
+            <select
+              name="departmentCode"
+              value={filters.departmentCode}
+              onChange={handleFilterChange}
+              style={{ width: '100%', padding: '0.5rem', border: '1px solid #ced4da', borderRadius: '4px' }}
+            >
+              <option value="">All Departments</option>
+              {departments.map(dept => (
+                <option key={dept.Department_code} value={dept.Department_code}>
+                  {dept.Department_code} - {dept.Department_Name}
+                </option>
+              ))}
+            </select>
+          </div>
           
-          {selectedReport !== 'worker-history' && (
-            <>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Worker ID</label>
-                <input
-                  type="text"
-                  name="workerId"
-                  value={filters.workerId}
-                  onChange={handleFilterChange}
-                  placeholder="Search by worker ID..."
-                  style={{ width: '100%', padding: '0.5rem', border: '1px solid #ced4da', borderRadius: '4px' }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Department</label>
-                <select
-                  name="departmentCode"
-                  value={filters.departmentCode}
-                  onChange={handleFilterChange}
-                  style={{ width: '100%', padding: '0.5rem', border: '1px solid #ced4da', borderRadius: '4px' }}
-                >
-                  <option value="">All Departments</option>
-                  {departments.map(dept => (
-                    <option key={dept.Department_code} value={dept.Department_code}>
-                      {dept.Department_code} - {dept.Department_Name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </>
-          )}
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Trade</label>
+            <select
+              name="tradeCode"
+              value={filters.tradeCode}
+              onChange={handleFilterChange}
+              style={{ width: '100%', padding: '0.5rem', border: '1px solid #ced4da', borderRadius: '4px' }}
+            >
+              <option value="">All Trades</option>
+              {trades.map(trade => (
+                <option key={trade.Trade_Code} value={trade.Trade_Code}>
+                  {trade.Trade_Code} - {trade.Trade_Name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          {selectedReport !== 'active-workers' && (
+          {selectedReport === 'alert-wise' && (
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Status</label>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Alert Type</label>
               <select
-                name="status"
-                value={filters.status}
+                name="validityAlert"
+                value={filters.validityAlert}
                 onChange={handleFilterChange}
                 style={{ width: '100%', padding: '0.5rem', border: '1px solid #ced4da', borderRadius: '4px' }}
               >
-                <option value="">All Statuses</option>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-                <option value="Suspended">Suspended</option>
+                <option value="">All Alerts</option>
+                <option value="overdue">Overdue</option>
+                <option value="expiring">Expiring Soon</option>
               </select>
             </div>
           )}
 
-          {selectedReport === 'worker-history' && (
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Date Range</label>
-              <select
-                name="dateRange"
-                value={filters.dateRange}
-                onChange={handleFilterChange}
-                style={{ width: '100%', padding: '0.5rem', border: '1px solid #ced4da', borderRadius: '4px' }}
-              >
-                <option value="">All Dates</option>
-                <option value="2024-01-01 to 2024-03-31">Q1 2024</option>
-                <option value="2024-04-01 to 2024-06-30">Q2 2024</option>
-                <option value="2024-07-01 to 2024-09-30">Q3 2024</option>
-                <option value="2024-10-01 to 2024-12-31">Q4 2024</option>
-              </select>
-            </div>
-          )}
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Date Range</label>
+            <select
+              name="dateRange"
+              value={filters.dateRange}
+              onChange={handleFilterChange}
+              style={{ width: '100%', padding: '0.5rem', border: '1px solid #ced4da', borderRadius: '4px' }}
+            >
+              <option value="">All Dates</option>
+              <option value="2024-01-01 to 2024-03-31">Q1 2024</option>
+              <option value="2024-04-01 to 2024-06-30">Q2 2024</option>
+              <option value="2024-07-01 to 2024-09-30">Q3 2024</option>
+              <option value="2024-10-01 to 2024-12-31">Q4 2024</option>
+            </select>
+          </div>
         </div>
         
         <div style={{ marginTop: '1rem' }}>
@@ -475,23 +713,31 @@ const Reports = () => {
             {currentRecords.length === 0 ? (
               <tr>
                 <td colSpan={getReportColumns().length} style={{ textAlign: 'center', color: '#A0522D' }}>
-                  {selectedReport === 'worker-history' && !filters.workerId 
-                    ? 'Please select a Worker ID to view history'
-                    : 'No records found'
-                  }
+                  No records found
                 </td>
               </tr>
             ) : (
               currentRecords.map((record, index) => (
-                <tr key={`${record.Worker_ID || index}-${record.Record_Date || index}`}>
+                <tr key={`${record.Department_Code || record.Trade_Code || index}-${record.Trade_Code || record.Department_Code || index}`}>
                   {getReportColumns().map(col => (
                     <td key={col.key}>
-                      {col.key === 'Status' ? (
-                        <div style={getStatusStyle(record.Status)}>
-                          {record.Status}
+                      {col.key === 'Alert_Type' ? (
+                        <div style={getAlertStyle(record[col.key])}>
+                          {record[col.key]}
                         </div>
-                      ) : col.key === 'Record_Date' || col.key === 'Validity_Date' ? (
+                      ) : col.key === 'Status' ? (
+                        <div style={getStatusStyle(record[col.key])}>
+                          {record[col.key]}
+                        </div>
+                      ) : col.key === 'Enrollment_Date' || col.key === 'Validity_Date' || col.key === 'Record_Date' ? (
                         record[col.key] ? new Date(record[col.key]).toLocaleDateString() : 'N/A'
+                      ) : col.key === 'Days_Remaining' ? (
+                        <span style={{ 
+                          color: record[col.key] < 0 ? '#dc3545' : record[col.key] <= 7 ? '#ffc107' : '#28a745',
+                          fontWeight: '600'
+                        }}>
+                          {record[col.key]}
+                        </span>
                       ) : (
                         record[col.key] || 'N/A'
                       )}

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
+const API_BASE = 'https://backend-k6ko.onrender.com';
+
 const Trade = () => {
   const [trades, setTrades] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,6 +31,7 @@ const Trade = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [recordsPerPage] = useState(10);
 
+
   // Remove any sample data arrays or objects. Only use useState([]) for trades.
   const trainingFrequencies = [
     '3 months',
@@ -43,7 +46,7 @@ const Trade = () => {
   const fetchTrades = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5001/api/trades');
+      const response = await fetch(`${API_BASE}/api/trades`);
       if (!response.ok) {
         throw new Error('Failed to fetch trades');
       }
@@ -58,7 +61,7 @@ const Trade = () => {
 
   const addTrade = async (tradeData) => {
     try {
-      const response = await fetch('http://localhost:5001/api/trades', {
+      const response = await fetch(`${API_BASE}/api/trades`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -78,7 +81,7 @@ const Trade = () => {
 
   const updateTrade = async (id, tradeData) => {
     try {
-      const response = await fetch(`http://localhost:5001/api/trades/${id}`, {
+      const response = await fetch(`${API_BASE}/api/trades/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -98,7 +101,7 @@ const Trade = () => {
 
   const deleteTrade = async (id) => {
     try {
-      const response = await fetch(`http://localhost:5001/api/trades/${id}`, {
+      const response = await fetch(`${API_BASE}/api/trades/${id}`, {
         method: 'DELETE',
       });
       if (!response.ok) {
