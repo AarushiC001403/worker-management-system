@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Highcharts from 'highcharts';
 import HighchartsReact from 'highcharts-react-official';
 
-const API_BASE = 'https://backend-k6ko.onrender.com';
+const API_BASE = 'https://worker-management-system-backend-9aum.onrender.com';
 
 const ALERT_TYPES = [
   { key: 'trade', label: 'Trade Register Alerts' },

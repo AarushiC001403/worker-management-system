@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const API_BASE = 'http://localhost:5001';
+const API_BASE = 'https://worker-management-system-backend-9aum.onrender.com';
 
 const TrainingRegister = () => {
   const [trainingRegisters, setTrainingRegisters] = useState([]);

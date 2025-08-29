@@ -11,7 +11,7 @@ import TrainingRegister from './TrainingRegister';
 import Alerts from './Alerts';
 import Reports from './Reports';
 
-const API_BASE = 'https://backend-k6ko.onrender.com';
+const API_BASE = 'https://worker-management-system-backend-9aum.onrender.com';
 
 const Dashboard = ({ onLogout, activePage }) => {
   const navigate = useNavigate();

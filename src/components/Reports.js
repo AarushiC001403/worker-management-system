@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 
-const API_BASE = 'https://backend-k6ko.onrender.com1';
+const API_BASE = 'https://worker-management-system-backend-9aum.onrender.com';
 
 const REPORT_TYPES = [
   { key: 'department-wise', label: 'Department-wise Reports' },

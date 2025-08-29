@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const API_BASE = 'https://backend-k6ko.onrender.com';
+const API_BASE = 'https://worker-management-system-backend-9aum.onrender.com';
 
 const TradeRegister = () => {
   const [tradeRegisters, setTradeRegisters] = useState([]);
